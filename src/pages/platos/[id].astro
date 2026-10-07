@@ -1,0 +1,135 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+
+export const prerender = false;
+
+const { id } = Astro.params;
+
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
+
+let plato = null;
+let error = "";
+
+try {
+  const respuesta = await fetch(`${API_URL}/platos/${id}`);
+
+  if (!respuesta.ok) {
+    if (respuesta.status === 404) {
+      error = "Plato no encontrado";
+    } else {
+      error = "No se pudo cargar el plato";
+    }
+  } else {
+    plato = await respuesta.json();
+  }
+} catch (err) {
+  error = "No se pudo conectar con el servidor";
+}
+
+
+let tieneGluten = false;
+let tieneMarisco = false;
+
+if (plato?.alergenos) {
+  tieneGluten = plato.alergenos.includes("Gluten");
+  tieneMarisco = plato.alergenos.includes("Marisco");
+}
+---
+<Layout title={plato ? plato.nombre : "Plato"}>
+  {
+    error ? (
+      <section class="plato-detalle plato-detalle__error">
+        <h1>{error}</h1>
+        <a
+          class="plato-detalle__volver boton-estilo"
+          href="/"
+          onclick="history.back(); return false;"
+        >
+          Volver a la carta
+        </a>
+      </section>
+    ) : plato ? (
+
+      <section class="plato-detalle">
+
+        {plato.imagen && (
+          <img
+            src={plato.imagen}
+            alt={plato.nombre}
+            class="plato-detalle__imagen"
+          />
+          
+        )}
+
+        <div class="plato-detalle__info">
+
+          <h1 class="plato-detalle__titulo">
+            {plato.nombre}
+          </h1>
+
+          {tieneGluten && (
+            <div class="plato-detalle__alergeno plato-detalle__alergeno--gluten">
+              <img
+                src="/iconosAlergenos/gluten30.png"
+                alt="Contiene gluten"
+              />
+              <span>Gluten</span>
+            </div>
+          )}
+
+          {tieneMarisco && (
+            <div class="plato-detalle__alergeno plato-detalle__alergeno--marisco">
+              <img
+                src="/iconosAlergenos/gamba48.png"
+                alt="Contiene marisco"
+              />
+              <span>Marisco</span>
+            </div>
+          )}
+
+
+
+          <p class="plato-detalle__campo">
+            <span class="plato-detalle__etiqueta">
+              Ingredientes:
+            </span>
+            {" "}{plato.ingredientes}
+          </p>
+
+          <p class="plato-detalle__campo">
+            <span class="plato-detalle__etiqueta">
+              Categoría:
+            </span>
+            {" "}{plato.categoria_nombre}
+          </p>
+
+          <p class="plato-detalle__precio">
+            {Number(plato.precio).toFixed(2)} €
+          </p>
+
+          <a
+            class="plato-detalle__volver boton-estilo"
+            href="/"
+            onclick="history.back(); return false;"
+          >
+            Volver
+          </a>
+
+        </div>
+
+      </section>
+    ) : (
+      <section class="plato-detalle plato-detalle__error">
+        <h1>No se pudo cargar el plato</h1>
+        <a
+          class="plato-detalle__volver boton-estilo"
+          href="/"
+          onclick="history.back(); return false;"
+        >
+          Volver
+        </a>
+      </section>
+    )
+  }
+</Layout>
