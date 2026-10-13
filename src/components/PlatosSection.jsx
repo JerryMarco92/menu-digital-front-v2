@@ -6,7 +6,7 @@ import "../styles/estilosCards.css";
 
 
 
-const API_URL = import.meta.env.API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 
 
 function PlatosPaginados() {
