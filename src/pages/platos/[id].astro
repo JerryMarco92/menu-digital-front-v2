@@ -1,135 +1,138 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 
+export async function getStaticPaths() {
+  const API_URL =
+    import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 
-export const prerender = false;
+  const limite = 13;
 
-const { id } = Astro.params;
-
-const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
-
-let plato = null;
-let error = "";
-
-try {
-  const respuesta = await fetch(`${API_URL}/platos/${id}`);
+  const respuesta = await fetch(
+    `${API_URL}/platos?pagina=1&limite=${limite}`
+  );
 
   if (!respuesta.ok) {
-    if (respuesta.status === 404) {
-      error = "Plato no encontrado";
-    } else {
-      error = "No se pudo cargar el plato";
+    throw new Error(
+      `No se pudieron obtener los platos: ${respuesta.status}`
+    );
+  }
+
+  const datos = await respuesta.json();
+  const total = Number(datos.total);
+  const totalPaginas = Math.ceil(total / limite);
+
+  const platos = [...datos.platos];
+
+  for (let pagina = 2; pagina <= totalPaginas; pagina++) {
+    const respuestaPagina = await fetch(
+      `${API_URL}/platos?pagina=${pagina}&limite=${limite}`
+    );
+
+    if (!respuestaPagina.ok) {
+      throw new Error(
+        `No se pudo obtener la página ${pagina} de platos`
+      );
     }
-  } else {
-    plato = await respuesta.json();
+
+    const datosPagina = await respuestaPagina.json();
+    platos.push(...datosPagina.platos);
   }
-} catch (err) {
-  error = "No se pudo conectar con el servidor";
+
+  return Promise.all(
+    platos.map(async (plato) => {
+      const respuestaDetalle = await fetch(
+        `${API_URL}/platos/${plato.id}`
+      );
+
+      if (!respuestaDetalle.ok) {
+        throw new Error(
+          `No se pudo obtener el detalle del plato ${plato.id}`
+        );
+      }
+
+      const detalle = await respuestaDetalle.json();
+
+      return {
+        params: {
+          id: String(plato.id),
+        },
+        props: {
+          plato: detalle,
+        },
+      };
+    })
+  );
 }
 
+const { plato } = Astro.props;
 
-let tieneGluten = false;
-let tieneMarisco = false;
+const tieneGluten =
+  plato.alergenos?.includes("Gluten") ?? false;
 
-if (plato?.alergenos) {
-  tieneGluten = plato.alergenos.includes("Gluten");
-  tieneMarisco = plato.alergenos.includes("Marisco");
-}
+const tieneMarisco =
+  plato.alergenos?.includes("Marisco") ?? false;
 ---
-<Layout title={plato ? plato.nombre : "Plato"}>
-  {
-    error ? (
-      <section class="plato-detalle plato-detalle__error">
-        <h1>{error}</h1>
-        <a
-          class="plato-detalle__volver boton-estilo"
-          href="/"
-          onclick="history.back(); return false;"
-        >
-          Volver a la carta
-        </a>
-      </section>
-    ) : plato ? (
 
-      <section class="plato-detalle">
+<Layout title={plato.nombre}>
+  <section class="plato-detalle">
+    {plato.imagen && (
+      <img
+        src={plato.imagen.trim()}
+        alt={plato.nombre}
+        class="plato-detalle__imagen"
+      />
+    )}
 
-        {plato.imagen && (
+    <div class="plato-detalle__info">
+      <h1 class="plato-detalle__titulo">
+        {plato.nombre}
+      </h1>
+
+      {tieneGluten && (
+        <div class="plato-detalle__alergeno plato-detalle__alergeno--gluten">
           <img
-            src={plato.imagen}
-            alt={plato.nombre}
-            class="plato-detalle__imagen"
+            src="/iconosAlergenos/gluten30.png"
+            alt="Contiene gluten"
           />
-          
-        )}
-
-        <div class="plato-detalle__info">
-
-          <h1 class="plato-detalle__titulo">
-            {plato.nombre}
-          </h1>
-
-          {tieneGluten && (
-            <div class="plato-detalle__alergeno plato-detalle__alergeno--gluten">
-              <img
-                src="/iconosAlergenos/gluten30.png"
-                alt="Contiene gluten"
-              />
-              <span>Gluten</span>
-            </div>
-          )}
-
-          {tieneMarisco && (
-            <div class="plato-detalle__alergeno plato-detalle__alergeno--marisco">
-              <img
-                src="/iconosAlergenos/gamba48.png"
-                alt="Contiene marisco"
-              />
-              <span>Marisco</span>
-            </div>
-          )}
-
-
-
-          <p class="plato-detalle__campo">
-            <span class="plato-detalle__etiqueta">
-              Ingredientes:
-            </span>
-            {" "}{plato.ingredientes}
-          </p>
-
-          <p class="plato-detalle__campo">
-            <span class="plato-detalle__etiqueta">
-              Categoría:
-            </span>
-            {" "}{plato.categoria_nombre}
-          </p>
-
-          <p class="plato-detalle__precio">
-            {Number(plato.precio).toFixed(2)} €
-          </p>
-
-          <a
-            class="plato-detalle__volver boton-estilo"
-            href="/"
-            onclick="history.back(); return false;"
-          >
-            Volver
-          </a>
-
+          <span>Gluten</span>
         </div>
+      )}
 
-      </section>
-    ) : (
-      <section class="plato-detalle plato-detalle__error">
-        <h1>No se pudo cargar el plato</h1>
-        <a
-          class="plato-detalle__volver boton-estilo"
-          href="/"
-          onclick="history.back(); return false;"
-        >
-          Volver
-        </a>
-      </section>
-    )
-  }
+      {tieneMarisco && (
+        <div class="plato-detalle__alergeno plato-detalle__alergeno--marisco">
+          <img
+            src="/iconosAlergenos/gamba48.png"
+            alt="Contiene marisco"
+          />
+          <span>Marisco</span>
+        </div>
+      )}
+
+      <p class="plato-detalle__campo">
+        <span class="plato-detalle__etiqueta">
+          Ingredientes:
+        </span>
+        {" "}{plato.ingredientes}
+      </p>
+
+      <p class="plato-detalle__campo">
+        <span class="plato-detalle__etiqueta">
+          Categoría:
+        </span>
+        {" "}{plato.categoria_nombre}
+      </p>
+
+      <p class="plato-detalle__precio">
+        {Number(plato.precio).toFixed(2)} €
+      </p>
+
+      <a
+        class="plato-detalle__volver boton-estilo"
+        href="/"
+        onclick="history.back(); return false;"
+      >
+        Volver
+      </a>
+    </div>
+  </section>
 </Layout>
