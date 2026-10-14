@@ -104,7 +104,6 @@ function PlatosPaginados() {
         // 3 < 6 ? numerosDePagina[1,2,3]...
     }
 
-    if (cargando) return <p className="estado">Cargando productos..</p>
     if (error) return <p className="estado error">{error}</p>
 
     return (
