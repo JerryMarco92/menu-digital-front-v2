@@ -6,7 +6,9 @@ import "../styles/estilosCards.css";
 
 
 
-const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.DEV
+    ? "http://localhost:3000"
+    : "https://menu-digital-back-v2.onrender.com";
 
 
 function PlatosPaginados() {
