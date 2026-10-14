@@ -9,6 +9,10 @@ function PlatoCard({plato}){
         src={plato.imagen}
         alt={plato.nombre}
         className="card__image"
+        loading="lazy"
+        decoding="async"
+        width="400"
+        height="300"
       />
 
       <p className="card__price">
